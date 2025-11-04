@@ -1,0 +1,114 @@
+body {
+  color: #ffffff;
+  background-color: #333333;
+  font-family: "Inter", "Poppins", "Helvetica Neue", sans-serif;
+  font-weight: 400;
+  font-size: 0.9rem;
+  letter-spacing: 0.3px;
+  line-height: 1.5;
+  min-height: 100vh;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-shadow: 0 0 1px rgba(255,255,255,0.5);
+}
+
+/* ========================================== */
+/* PIECES GRID AND CARDS */
+/* ========================================== */
+.pieces-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 0.5rem;
+}
+
+@media (max-width: 576px) {
+  .pieces-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+    padding: 0.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .pieces-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .pieces-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.25rem;
+  }
+}
+
+.piece-card {
+  background: linear-gradient(135deg, #4a4a4a 0%, #5a5a5a 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 1rem;
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* Add webkit prefixes for compatibility */
+.backdrop-blur {
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.crisp-edges {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+.piece-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.45);
+  border-color: rgba(77, 171, 247, 0.3);
+}
+
+.piece-card h4 {
+  color: #4dabf7;
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.piece-card span {
+  color: #ffffff;
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-shadow: 0 0 1px rgba(255,255,255,0.8);
+}
+
+.piece-card strong {
+  color: #ffffff;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+/* Image styling */
+.piece-card img {
+  width: 100%;
+  border-radius: 10px;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  display: block;
+}
+
+.piece-card img:hover {
+  opacity: 0.95;
+  transform: scale(1.02);
+}
