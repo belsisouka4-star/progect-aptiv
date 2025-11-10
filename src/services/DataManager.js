@@ -95,7 +95,6 @@ async function getCache() {
     // support legacy shape where data may have been stored directly
     return Array.isArray(cached) ? cached : null;
   } catch (err) {
-    console.warn("Failed to read cache from IndexedDB:", err);
     try { await cacheStore.removeItem(CACHE_KEY); } catch (_) {}
     return null;
   }
@@ -107,7 +106,6 @@ async function setCache(data) {
     const payload = { data, timestamp: Date.now() };
     await cacheStore.setItem(CACHE_KEY, payload);
   } catch (err) {
-    console.warn("Failed to set cache in IndexedDB:", err);
     try { await cacheStore.removeItem(CACHE_KEY); } catch (_) {}
   }
 }
@@ -116,7 +114,6 @@ async function saveUploadedImagesMap(mapObj) {
   try {
     await cacheStore.setItem(UPLOADED_IMAGES_KEY, mapObj || {});
   } catch (err) {
-    console.warn("Failed to save uploaded images in IndexedDB:", err);
   }
 }
 
@@ -125,7 +122,6 @@ async function getUploadedImagesMap() {
     const mapObj = await cacheStore.getItem(UPLOADED_IMAGES_KEY);
     return mapObj || {};
   } catch (err) {
-    console.warn("Failed to read uploaded images from IndexedDB:", err);
     return {};
   }
 }
@@ -146,7 +142,6 @@ const dataManager = {
     try {
       await cacheStore.removeItem(CACHE_KEY);
     } catch (err) {
-      console.warn("Failed to clear IndexedDB cache:", err);
     }
   },
 
@@ -159,7 +154,6 @@ const dataManager = {
       const pieces = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
       return (pieces || []).map(p => normalizeHolderName(migratePieceFields(p)));
     } catch (err) {
-      console.error("Failed to get local pieces:", err);
       return [];
     }
   },
@@ -168,7 +162,6 @@ const dataManager = {
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(pieces));
     } catch (err) {
-      console.error("Failed to save local pieces:", err);
     }
   },
 
@@ -185,11 +178,8 @@ const dataManager = {
     try {
       const testQuery = query(collection(db, PIECES_COLLECTION), limit(1));
       await getDocs(testQuery);
-      console.log("Firestore connection established");
     } catch (err) {
-      console.error("Failed to connect to Firestore:", err);
       if (!this.isOnline()) {
-        console.log("Offline mode: using local storage");
       } else {
         throw err;
       }
@@ -204,14 +194,11 @@ const dataManager = {
           if (parsed && typeof parsed === 'object') {
             await saveUploadedImagesMap(parsed);
             localStorage.removeItem(UPLOADED_IMAGES_KEY);
-            console.log('Migrated uploaded_images from localStorage to IndexedDB');
           }
         } catch (parseErr) {
-          console.warn('Failed to parse legacy uploaded_images for migration:', parseErr);
         }
       }
     } catch (migrationErr) {
-      console.warn('Migration check for uploaded_images failed:', migrationErr);
     }
   },
 
@@ -221,7 +208,6 @@ const dataManager = {
     if (cached) return cached;
 
     if (!this.isOnline()) {
-      console.log("Offline: returning local pieces");
       return this.getLocalPieces();
     }
 
@@ -236,13 +222,11 @@ const dataManager = {
 
           const validation = validatePieceResult(piece);
           if (validation && validation.isValid === false) {
-            console.warn("Skipping invalid piece:", docSnap.id, validation.errors);
             return;
           }
 
           pieces.push(piece);
         } catch (err) {
-          console.warn("Skipping invalid piece during processing:", docSnap.id, err.message || err);
         }
       });
 
@@ -251,7 +235,6 @@ const dataManager = {
       await setCache(pieces);
       return pieces;
     } catch (err) {
-      console.error("Failed to get pieces from Firestore, falling back to local:", err);
       return this.getLocalPieces();
     }
   },
@@ -287,7 +270,6 @@ const dataManager = {
         totalPages: Math.ceil(allPieces.length / pageSize)
       };
     } catch (err) {
-      console.error("Failed to get paginated pieces:", err);
       const localPieces = this.getLocalPieces();
       return {
         pieces: localPieces.slice(startIndex, startIndex + pageSize),
@@ -315,13 +297,11 @@ const dataManager = {
 
         const validation = validatePieceResult(piece);
         if (validation && validation.isValid === false) {
-          console.warn("Piece fetched but failed validation:", id, validation.errors);
         }
         return piece;
       }
       return null;
     } catch (err) {
-      console.error("Failed to get piece from Firestore:", err);
       const localPieces = this.getLocalPieces();
       return localPieces.find(p => p.id === id) || null;
     }
@@ -348,7 +328,6 @@ const dataManager = {
 
       return { id: docRef.id, ...sanitized };
     } catch (err) {
-      console.error("Failed to add piece:", err);
       throw err;
     }
   },
@@ -373,14 +352,12 @@ const dataManager = {
 
         const apn = sanitizedPiece.APN ? sanitizedPiece.APN.toString().trim() : '';
         if (!apn) {
-          console.log("Skipping piece with empty APN:", sanitizedPiece);
           results.errors++;
           continue;
         }
 
         const validation = validatePieceResult(sanitizedPiece);
         if (validation && validation.isValid === false) {
-          console.warn(`Piece with APN "${apn}" has validation issues:`, validation.errors);
         }
 
         normalizeHolderName(sanitizedPiece);
@@ -402,7 +379,6 @@ const dataManager = {
           operations = 0;
         }
       } catch (err) {
-        console.error("Failed to process piece:", pieceRaw, err);
         results.errors++;
       }
     }
@@ -439,7 +415,6 @@ const dataManager = {
 
       return { id, ...sanitized };
     } catch (err) {
-      console.error("Failed to update piece:", err);
       throw err;
     }
   },
@@ -459,7 +434,6 @@ const dataManager = {
 
       return true;
     } catch (err) {
-      console.error("Failed to delete piece:", err);
       throw err;
     }
   },
@@ -477,7 +451,6 @@ const dataManager = {
       this.saveLocalPieces([]);
       return snapshot.size;
     } catch (err) {
-      console.error("Failed to delete all pieces:", err);
       throw err;
     }
   },

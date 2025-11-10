@@ -88,11 +88,9 @@ function AppContent() {
               }
             }
           } catch (migrationError) {
-            console.error('Failed to migrate localStorage data:', migrationError);
           }
         }, 100); // Reduced delay to 100ms for faster loading
       } catch (error) {
-        console.error('Failed to initialize app:', error);
       }
     };
 

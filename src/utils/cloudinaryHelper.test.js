@@ -10,13 +10,13 @@ describe('getThumbnailUrl', () => {
   it('should return original URL for Cloudinary URLs with /image/upload/', () => {
     const url = 'https://res.cloudinary.com/demo/image/upload/v123/sample.jpg';
     const result = getThumbnailUrl(url, 400, null, 60);
-    expect(result).toBe('https://res.cloudinary.com/demo/image/upload/w_400,c_fill,q_60/v123/sample.jpg');
+    expect(result).toBe('https://res.cloudinary.com/demo/image/upload/w_400,c_fill,q_60,f_auto,fl_lossy/v123/sample.jpg');
   });
 
   it('should handle Cloudinary URLs with res.cloudinary.com', () => {
     const url = 'https://res.cloudinary.com/demo/image/upload/v123/sample.jpg';
     const result = getThumbnailUrl(url, 400, 300, 80);
-    expect(result).toBe('https://res.cloudinary.com/demo/image/upload/w_400,h_300,c_fill,q_80/v123/sample.jpg');
+    expect(result).toBe('https://res.cloudinary.com/demo/image/upload/w_400,h_300,c_fill,q_80,f_auto,fl_lossy/v123/sample.jpg');
   });
 
   it('should return original URL for non-Cloudinary URLs', () => {
@@ -38,6 +38,6 @@ describe('getThumbnailUrl', () => {
   it('should use default parameters', () => {
     const url = 'https://res.cloudinary.com/demo/image/upload/v123/sample.jpg';
     const result = getThumbnailUrl(url);
-    expect(result).toBe('https://res.cloudinary.com/demo/image/upload/w_400,c_fill,q_60/v123/sample.jpg');
+    expect(result).toBe('https://res.cloudinary.com/demo/image/upload/w_400,c_fill,q_60,f_auto,fl_lossy/v123/sample.jpg');
   });
 });

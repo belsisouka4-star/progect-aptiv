@@ -15,23 +15,6 @@ const validateFirebaseConfig = () => {
   const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
   
   if (missingVars.length > 0) {
-    console.error('Missing required Firebase environment variables:', missingVars);
-    
-    // Provide helpful development message
-    if (process.env.NODE_ENV === 'development') {
-      console.info(`
-      Please create a .env file in your project root with the following variables:
-      
-      REACT_APP_FIREBASE_API_KEY=your_api_key
-      REACT_APP_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-      REACT_APP_FIREBASE_PROJECT_ID=your_project_id
-      REACT_APP_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-      REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-      REACT_APP_FIREBASE_APP_ID=your_app_id
-      REACT_APP_FIREBASE_MEASUREMENT_ID=your_measurement_id
-      `);
-    }
-    
     throw new Error(`Missing Firebase configuration: ${missingVars.join(', ')}`);
   }
 };
@@ -60,7 +43,6 @@ try {
   
   // Initialize Firebase app
   app = initializeApp(firebaseConfig);
-  console.log('Firebase app initialized successfully');
 
   // Initialize Firestore with enhanced persistence configuration
   db = initializeFirestore(app, {
@@ -76,19 +58,15 @@ try {
 
   // Initialize Firebase Storage
   storage = getStorage(app);
-  console.log('Firebase Storage initialized successfully');
 
   // Initialize Analytics if supported and measurementId is provided
   if (process.env.REACT_APP_FIREBASE_MEASUREMENT_ID) {
     isSupported().then(supported => {
       if (supported) {
         analytics = getAnalytics(app);
-        console.log('Firebase Analytics initialized');
       } else {
-        console.log('Firebase Analytics not supported in this environment');
       }
     }).catch(error => {
-      console.warn('Firebase Analytics initialization failed:', error);
     });
   }
 
@@ -99,9 +77,7 @@ try {
     
     try {
       connectFirestoreEmulator(db, host, parseInt(port));
-      console.log(`Firestore emulator connected: ${host}:${port}`);
     } catch (emulatorError) {
-      console.warn('Failed to connect to Firestore emulator:', emulatorError);
     }
   }
 
@@ -111,9 +87,7 @@ try {
       // Simple test to verify Firestore is working
       const testCollection = firestore.collection(db, '_test_connection');
       await firestore.getDocs(firestore.query(testCollection, firestore.limit(1)));
-      console.log('Firestore connection test passed');
     } catch (error) {
-      console.warn('Firestore connection test failed (this might be normal if no documents exist):', error);
     }
   };
 
@@ -121,15 +95,6 @@ try {
   setTimeout(testConnection, 100);
 
 } catch (error) {
-  console.error('Firebase initialization failed:', error);
-  
-  // Provide more specific error messages
-  if (error.code === 'app/duplicate-app') {
-    console.error('Firebase app was already initialized. Make sure you are not initializing Firebase multiple times.');
-  } else if (error.code === 'app/invalid-app-argument') {
-    console.error('Invalid Firebase configuration. Please check your environment variables.');
-  }
-  
   // Re-throw the error to prevent the app from running with broken Firebase
   throw new Error(`Firebase initialization failed: ${error.message}`);
 }
@@ -137,3 +102,4 @@ try {
 // Export with null checks for safety
 export { app, db, storage, analytics };
 export default app;
+ 

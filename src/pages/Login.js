@@ -278,7 +278,6 @@ const Login = () => {
           localStorage.setItem('user', JSON.stringify({ role: 'admin' }));
           navigate('/manage-pieces');
         } else {
-          console.error('Incorrect admin password');
           setPassword(''); // Clear password field on failed attempt
           setLoading(false);
         }
@@ -288,7 +287,6 @@ const Login = () => {
           localStorage.setItem('user', JSON.stringify({ role: 'supervisor' }));
           navigate('/search');
         } else {
-          console.error('Incorrect supervisor password');
           setPassword(''); // Clear password field on failed attempt
           setLoading(false);
         }

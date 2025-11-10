@@ -42,7 +42,6 @@ class ImageStorageService {
         size: file.size
       };
     } catch (error) {
-      console.error('Error uploading image:', error);
       return {
         success: false,
         error: error.message
@@ -83,7 +82,6 @@ class ImageStorageService {
       await deleteObject(storageRef);
       return { success: true };
     } catch (error) {
-      console.error('Error deleting image:', error);
       return {
         success: false,
         error: error.message
@@ -98,7 +96,6 @@ class ImageStorageService {
       const url = await getDownloadURL(storageRef);
       return { success: true, url };
     } catch (error) {
-      console.error('Error getting image URL:', error);
       return {
         success: false,
         error: error.message

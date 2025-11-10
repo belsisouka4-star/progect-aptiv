@@ -28,7 +28,6 @@ const PieceImage = ({
         width: '100%',
         height: '100%',
         objectFit: 'contain',
-        imageRendering: '-webkit-optimize-contrast',
         imageRendering: 'crisp-edges'
       }}
       loading={critical ? 'eager' : 'lazy'}

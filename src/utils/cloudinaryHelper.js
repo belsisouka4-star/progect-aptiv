@@ -38,7 +38,6 @@ export const uploadToCloudinary = async (file, options = {}) => {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`Cloudinary upload failed on attempt ${attempt}: Status ${response.status}, Response: ${errorText}`);
         throw new Error(`Cloudinary upload failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
@@ -54,7 +53,6 @@ export const uploadToCloudinary = async (file, options = {}) => {
       };
     } catch (error) {
       lastError = error;
-      console.error(`Cloudinary upload error on attempt ${attempt}:`, error);
       if (attempt < maxRetries) {
         // Wait before retrying (exponential backoff)
         await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
@@ -62,7 +60,6 @@ export const uploadToCloudinary = async (file, options = {}) => {
     }
   }
 
-  console.error('All Cloudinary upload attempts failed:', lastError);
   return {
     success: false,
     error: lastError.message
