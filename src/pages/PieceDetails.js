@@ -30,11 +30,7 @@ function PieceDetails() {
       return;
     }
 
-    // Redirect warehouse users back to search
-    if (user.role === 'warehouse') {
-      navigate('/search');
-      return;
-    }
+    // No warehouse role redirect needed
 
     const loadPiece = async () => {
       let foundPiece = null;
@@ -240,28 +236,26 @@ function PieceDetails() {
             )}
           </div>
 
-          {userRole !== 'warehouse' && (
-            <div className="secondary-content">
+          <div className="secondary-content">
+            <section className="details-section">
+              <h2 className="section-title">More Information</h2>
+              <div className="more-info-box">
+                {piece['More Information'] || piece.MoreInformation || 'No additional information available.'}
+              </div>
+            </section>
+
+            {piece.ImagePath && (
               <section className="details-section">
-                <h2 className="section-title">More Information</h2>
-                <div className="more-info-box">
-                  {piece['More Information'] || piece.MoreInformation || 'No additional information available.'}
+                <h2 className="section-title">Visual</h2>
+                <div className="image-grid">
+                  <div className="image-wrapper" onClick={() => { setZoomImageSrc(piece.ImagePath); setZoomImageAlt(piece['Parts Holder'] || piece.APN); setShowZoomModal(true); }}>
+                    <img src={piece.ImagePath} alt={piece['Parts Holder'] || piece.APN} className="image-thumbnail" />
+                    <div className="image-overlay">Click to zoom</div>
+                  </div>
                 </div>
               </section>
-
-              {piece.ImagePath && (
-                <section className="details-section">
-                  <h2 className="section-title">Visual</h2>
-                  <div className="image-grid">
-                    <div className="image-wrapper" onClick={() => { setZoomImageSrc(piece.ImagePath); setZoomImageAlt(piece['Parts Holder'] || piece.APN); setShowZoomModal(true); }}>
-                      <img src={piece.ImagePath} alt={piece['Parts Holder'] || piece.APN} className="image-thumbnail" />
-                      <div className="image-overlay">Click to zoom</div>
-                    </div>
-                  </div>
-                </section>
-              )}
-            </div>
-          )}
+            )}
+          </div>
         </main>
       </div>
 

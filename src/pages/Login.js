@@ -222,7 +222,7 @@ select option {
 /* === PC View Background === */
 @media (min-width: 481px) {
   body {
-    background-image: url('/hd-login-background.png');
+    background-image: url('./hd-login-background.png');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -256,10 +256,18 @@ const Login = () => {
   React.useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     if (user.role) {
+      // Handle legacy warehouse role - migrate to technician
+      if (user.role === 'warehouse') {
+        user.role = 'technician';
+        localStorage.setItem('user', JSON.stringify(user));
+        showNotification('Your role has been updated to Technician. Please log in again.', 'info');
+        localStorage.removeItem('user'); // Force re-login
+        return;
+      }
       if (user.role === 'admin') navigate('/manage-pieces');
       else navigate('/search');
     }
-  }, [navigate]);
+  }, [navigate, showNotification]);
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -325,7 +333,7 @@ const Login = () => {
       <style dangerouslySetInnerHTML={{ __html: styles }} />
       <div className="app-container">
         <div className="login-container">
-          <h1 className="login-title">APTIVM2</h1>
+          <h1 className="login-title">APTIV_M2</h1>
 
           <form onSubmit={handleLogin}>
             <div className="user-access-section">
@@ -342,7 +350,6 @@ const Login = () => {
               >
                 <option value="">Select a role</option>
                 <option value="technician">Maintenance Technician</option>
-                <option value="warehouse">Warehouse Staff</option>
                 <option value="supervisor">Supervisor</option>
                 <option value="admin">Admin</option>
               </select>

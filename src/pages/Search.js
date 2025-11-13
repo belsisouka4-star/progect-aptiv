@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 
 // Services and Components
 import dataManager from '../services/DataManager';
-import DynamicDataDisplay from '../components/DynamicDataDisplay';
 import ImageZoomModal from '../components/ImageZoomModal';
 
 // Styles
@@ -384,8 +383,6 @@ function Search() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showZoomModal, setShowZoomModal] = useState(false);
-  const [zoomImageSrc, setZoomImageSrc] = useState('');
-  const [zoomImageAlt, setZoomImageAlt] = useState('');
   const [showWarningDropdown, setShowWarningDropdown] = useState(false);
   const [selectedUnderStockAPN, setSelectedUnderStockAPN] = useState('');
   const navigate = useNavigate();
@@ -534,40 +531,30 @@ function Search() {
     let filtered = pieces;
     if (partInfo.trim()) {
       const terms = partInfo.toLowerCase().split(',').map(t => t.trim()).filter(t => t);
-      if (userRole === 'warehouse') {
-        filtered = filtered.filter(p =>
-          terms.every(term =>
-            (p.APN && p.APN.toString().toLowerCase().includes(term)) ||
-            (p.SPN && p.SPN.toString().toLowerCase().includes(term)) ||
-            (p['Holder Name'] && (Array.isArray(p['Holder Name']) ? p['Holder Name'].some(name => name.toLowerCase().includes(term)) : p['Holder Name'].toString().toLowerCase().includes(term)))
-          )
-        );
-      } else {
-        // Define searchable fields for non-warehouse roles to reduce irrelevant matches
-        const searchableFields = ['APN', 'SPN', 'Holder Name', 'Parts Holder', 'Equipment', 'ProjectLine', 'Section', 'Description', 'Storage Location', 'Suppliers', 'Unit Price', 'Unrestricted Stock', 'Min', 'Max', 'In Transit', 'More Information'];
-        filtered = filtered.filter(p =>
-          terms.every(term =>
-            searchableFields.some(field => {
-              const val = p[field];
-              if (!val) return false;
-              if (Array.isArray(val)) {
-                return val.some(item => item && item.toString().toLowerCase().includes(term));
-              }
-              return val.toString().toLowerCase().includes(term);
-            })
-          )
-        );
-      }
+      // Define searchable fields for all roles
+      const searchableFields = ['APN', 'SPN', 'Holder Name', 'Parts Holder', 'Equipment', 'ProjectLine', 'Section', 'Description', 'Storage Location', 'Suppliers', 'Unit Price', 'Unrestricted Stock', 'Min', 'Max', 'In Transit', 'More Information'];
+      filtered = filtered.filter(p =>
+        terms.every(term =>
+          searchableFields.some(field => {
+            const val = p[field];
+            if (!val) return false;
+            if (Array.isArray(val)) {
+              return val.some(item => item && item.toString().toLowerCase().includes(term));
+            }
+            return val.toString().toLowerCase().includes(term);
+          })
+        )
+      );
     }
-    if (machineName.trim() && userRole !== 'warehouse') {
+    if (machineName.trim()) {
       const term = machineName.toLowerCase();
       filtered = filtered.filter(p => p.Equipment?.toLowerCase().includes(term));
     }
-    if (location.trim() && userRole !== 'warehouse') {
+    if (location.trim()) {
       const term = location.toLowerCase();
       filtered = filtered.filter(p => p.ProjectLine?.toLowerCase().includes(term));
     }
-    if (maintenanceType.trim() && userRole !== 'warehouse') {
+    if (maintenanceType.trim()) {
       const term = maintenanceType.toLowerCase();
       filtered = filtered.filter(p => p.Section?.toLowerCase().includes(term));
     }
@@ -721,13 +708,13 @@ function Search() {
             </div>
           </div>
 
-          <div className="filter-controls" style={{ display: 'grid', gridTemplateColumns: userRole === 'warehouse' ? '1fr' : 'repeat(2, 1fr)', gap: '5px', marginBottom: '15px' }}>
+          <div className="filter-controls" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '5px', marginBottom: '15px' }}>
             <div className="filter-group">
-              <label>{userRole === 'warehouse' ? 'APN or SPN' : 'Part Information'}</label>
+              <label>Part Information</label>
               <div className="combobox-container">
                 <input
                   type="text"
-                  placeholder={userRole === 'warehouse' ? "Enter APN or SPN..." : "Enter part info..."}
+                  placeholder="Enter part info..."
                   value={partInfo}
                   onChange={(e) => {
                     setPartInfo(e.target.value);
@@ -760,101 +747,95 @@ function Search() {
               </div>
             </div>
 
-            {userRole !== 'warehouse' && (
-              <div className="filter-group">
-                <label>Equipment</label>
-                <div className="combobox-container">
-                  <input
-                    type="text"
-                    placeholder="Enter machine name..."
-                    value={machineName}
-                    onChange={(e) => {
-                      setMachineName(e.target.value);
-                      const filtered = machineSuggestions.filter(s => s.toLowerCase().includes(e.target.value.toLowerCase()));
-                      setMachineFilteredSuggestions(filtered);
-                      setMachineShowDropdown(filtered.length > 0);
-                    }}
-                    onFocus={() => setMachineShowDropdown(true)}
-                    onBlur={() => setTimeout(() => setMachineShowDropdown(false), 200)}
-                    className="search-input"
-                  />
-                  {machineShowDropdown && machineFilteredSuggestions.length > 0 && (
-                    <div className="combobox-dropdown">
-                      {machineFilteredSuggestions.map((suggestion, index) => (
-                        <div
-                          key={index}
-                          className="combobox-item"
-                          onClick={() => {
-                            setMachineName(suggestion);
-                            setMachineShowDropdown(false);
-                          }}
-                        >
-                          {suggestion}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+            <div className="filter-group">
+              <label>Equipment</label>
+              <div className="combobox-container">
+                <input
+                  type="text"
+                  placeholder="Enter machine name..."
+                  value={machineName}
+                  onChange={(e) => {
+                    setMachineName(e.target.value);
+                    const filtered = machineSuggestions.filter(s => s.toLowerCase().includes(e.target.value.toLowerCase()));
+                    setMachineFilteredSuggestions(filtered);
+                    setMachineShowDropdown(filtered.length > 0);
+                  }}
+                  onFocus={() => setMachineShowDropdown(true)}
+                  onBlur={() => setTimeout(() => setMachineShowDropdown(false), 200)}
+                  className="search-input"
+                />
+                {machineShowDropdown && machineFilteredSuggestions.length > 0 && (
+                  <div className="combobox-dropdown">
+                    {machineFilteredSuggestions.map((suggestion, index) => (
+                      <div
+                        key={index}
+                        className="combobox-item"
+                        onClick={() => {
+                          setMachineName(suggestion);
+                          setMachineShowDropdown(false);
+                        }}
+                      >
+                        {suggestion}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
 
-            {userRole !== 'warehouse' && (
-              <div className="filter-group">
-                <label>Project Line</label>
-                <div className="combobox-container">
-                  <input
-                    type="text"
-                    placeholder="Enter location..."
-                    value={location}
-                    onChange={(e) => {
-                      setLocation(e.target.value);
-                      const filtered = locationSuggestions.filter(s => s.toLowerCase().includes(e.target.value.toLowerCase()));
-                      setLocationFilteredSuggestions(filtered);
-                      setLocationShowDropdown(filtered.length > 0);
-                    }}
-                    onFocus={() => setLocationShowDropdown(true)}
-                    onBlur={() => setTimeout(() => setLocationShowDropdown(false), 200)}
-                    className="search-input"
-                  />
-                  {locationShowDropdown && locationFilteredSuggestions.length > 0 && (
-                    <div className="combobox-dropdown">
-                      {locationFilteredSuggestions.map((suggestion, index) => (
-                        <div
-                          key={index}
-                          className="combobox-item"
-                          onClick={() => {
-                            setLocation(suggestion);
-                            setLocationShowDropdown(false);
-                          }}
-                        >
-                          {suggestion}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+            <div className="filter-group">
+              <label>Project Line</label>
+              <div className="combobox-container">
+                <input
+                  type="text"
+                  placeholder="Enter location..."
+                  value={location}
+                  onChange={(e) => {
+                    setLocation(e.target.value);
+                    const filtered = locationSuggestions.filter(s => s.toLowerCase().includes(e.target.value.toLowerCase()));
+                    setLocationFilteredSuggestions(filtered);
+                    setLocationShowDropdown(filtered.length > 0);
+                  }}
+                  onFocus={() => setLocationShowDropdown(true)}
+                  onBlur={() => setTimeout(() => setLocationShowDropdown(false), 200)}
+                  className="search-input"
+                />
+                {locationShowDropdown && locationFilteredSuggestions.length > 0 && (
+                  <div className="combobox-dropdown">
+                    {locationFilteredSuggestions.map((suggestion, index) => (
+                      <div
+                        key={index}
+                        className="combobox-item"
+                        onClick={() => {
+                          setLocation(suggestion);
+                          setLocationShowDropdown(false);
+                        }}
+                      >
+                        {suggestion}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
 
-            {userRole !== 'warehouse' && (
-              <div className="filter-group">
-                <label htmlFor="maintenance-type-select">Section</label>
-              <select
-                  value={maintenanceType}
-                  onChange={(e) => setMaintenanceType(e.target.value)}
-                  className="search-select"
-                  title="Select maintenance type"
-                  aria-label="Select maintenance type"
-                  id="maintenance-type-select"
-                  name="maintenanceType"
-                >
-                  <option value="">All</option>
-                  <option value="final assembly">Final assembly</option>
-                  <option value="die center">Die Center</option>
-                  <option value="cutting">Cutting</option>
-                </select>
-              </div>
-            )}
+            <div className="filter-group">
+              <label htmlFor="maintenance-type-select">Section</label>
+            <select
+                value={maintenanceType}
+                onChange={(e) => setMaintenanceType(e.target.value)}
+                className="search-select"
+                title="Select maintenance type"
+                aria-label="Select maintenance type"
+                id="maintenance-type-select"
+                name="maintenanceType"
+              >
+                <option value="">All</option>
+                <option value="final assembly">Final assembly</option>
+                <option value="die center">Die Center</option>
+                <option value="cutting">Cutting</option>
+              </select>
+            </div>
           </div>
 
           {loading && <div className="corporate-loading">Loading pieces...</div>}
@@ -885,38 +866,7 @@ function Search() {
 
                   <div className="pieces-grid">
                     {filteredPieces.map((piece) => {
-                      if (userRole === 'warehouse') {
-                        const pieceInfoItems = [
-                          { label: 'SPN', value: piece.SPN },
-                          { label: 'Storage Location', value: piece['Storage Location'] },
-                          { label: 'Unrestricted Stock', value: piece['Unrestricted Stock'] }
-                        ];
-                        return (
-                          <div key={piece.id || piece.APN} className="piece-card">
-                            <div style={{ fontSize: '2.2rem', fontWeight: 'bold', color: 'white', textShadow: '0 0 5px rgba(255,255,255,0.5)', marginBottom: '15px' }}>
-                              {piece.APN}
-                            </div>
-                            <div style={{ width: '100%', height: '150px', borderRadius: '8px', overflow: 'hidden', backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', marginBottom: '15px', cursor: (pieceImages[piece.id] || piece.ImagePath) ? 'pointer' : 'default' }} onClick={() => { if (pieceImages[piece.id] || piece.ImagePath) { setZoomImageSrc(pieceImages[piece.id] || piece.ImagePath); setZoomImageAlt(piece.APN); setShowZoomModal(true); } }}>
-                              {(pieceImages[piece.id] || piece.ImagePath) ? (
-                                <img src={pieceImages[piece.id] || piece.ImagePath} alt={piece.APN} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" onError={(e) => { e.target.style.display = 'none'; }} />
-                              ) : (
-                                <span style={{color: 'rgba(255,255,255,0.5)'}}>No Img</span>
-                              )}
-                            </div>
-                            <div className="piece-info">
-                              {pieceInfoItems.map((item, idx) => (
-                                <div key={idx} className="piece-info-item">
-                                  <span>{item.label}:</span>
-                                  <span>{item.label === 'Holder Name' ? <span style={{ cursor: 'pointer', color: '#007bff' }} onClick={(e) => { e.stopPropagation(); navigate(`/search?partInfo=${encodeURIComponent(Array.isArray(item.value) ? item.value.join(', ') : item.value)}`); }}>{renderValue(item.value)}</span> : renderValue(item.value)}</span>
-                                </div>
-                              ))}
-                              <DynamicDataDisplay piece={piece} navigate={navigate} />
-                            </div>
-                          </div>
-                        );
-                      }
-                      
-                      else if (userRole === 'technician') {
+                      if (userRole === 'technician') {
                         const pieceInfoItems = [
                           { label: 'Parts Holder', value: piece['Parts Holder'] },
                           { label: 'SPN', value: piece.SPN },
@@ -1057,7 +1007,7 @@ function Search() {
           )}
 
           {showZoomModal && (
-            <ImageZoomModal isOpen={showZoomModal} imageSrc={zoomImageSrc} imageAlt={zoomImageAlt} onClose={() => setShowZoomModal(false)} />
+            <ImageZoomModal isOpen={showZoomModal} imageSrc="" imageAlt="" onClose={() => setShowZoomModal(false)} />
           )}
       </div>
     </>

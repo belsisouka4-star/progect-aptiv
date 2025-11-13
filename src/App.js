@@ -1,12 +1,6 @@
-import React, { useEffect, useState, createContext, useContext } from "react";
+import React, { useEffect, useState, createContext, useContext, Suspense, lazy } from "react";
 import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
 import { App } from '@capacitor/app';
-
-// Pages
-import Login from "./pages/Login";
-import Search from "./pages/Search";
-import PieceDetails from "./pages/PieceDetails";
-import ManagePieces from "./pages/ManagePieces";
 
 // Components
 import Notification from "./components/Notification";
@@ -18,6 +12,12 @@ import dataManager from "./services/DataManager";
 
 // Styles
 import './styles/corporate.css';
+
+// Lazy load pages for code splitting
+const Login = lazy(() => import("./pages/Login"));
+const Search = lazy(() => import("./pages/Search"));
+const PieceDetails = lazy(() => import("./pages/PieceDetails"));
+const ManagePieces = lazy(() => import("./pages/ManagePieces"));
 
 // Notification Context
 const NotificationContext = createContext();
@@ -144,12 +144,14 @@ function AppContent() {
     <ErrorBoundary>
       <NotificationContext.Provider value={{ showNotification }}>
         <ConfirmationContext.Provider value={{ showConfirmation }}>
-          <Routes>
-            <Route path="/" element={<Login />} />
-            <Route path="/search" element={<Search />} />
-            <Route path="/manage-pieces" element={<ManagePieces />} />
-            <Route path="/piece/:id" element={<PieceDetails />} />
-          </Routes>
+          <Suspense fallback={<div className="loading-spinner">Loading...</div>}>
+            <Routes>
+              <Route path="/" element={<Login />} />
+              <Route path="/search" element={<Search />} />
+              <Route path="/manage-pieces" element={<ManagePieces />} />
+              <Route path="/piece/:id" element={<PieceDetails />} />
+            </Routes>
+          </Suspense>
           {notifications.map(notification => (
             <Notification
               key={notification.id}

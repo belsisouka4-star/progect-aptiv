@@ -145,10 +145,9 @@ export const validateExcelFile = (file) => {
  */
 export const hasPermission = (userRole, requiredRole) => {
   const roleHierarchy = {
-    'warehouse': 1,
-    'technician': 2,
-    'supervisor': 3,
-    'admin': 4
+    'technician': 1,
+    'supervisor': 2,
+    'admin': 3
   };
 
   return roleHierarchy[userRole] >= roleHierarchy[requiredRole];

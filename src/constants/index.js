@@ -24,8 +24,7 @@ export const STORAGE_KEYS = {
 export const USER_ROLES = {
   ADMIN: 'admin',
   SUPERVISOR: 'supervisor',
-  TECHNICIAN: 'technician',
-  WAREHOUSE: 'warehouse'
+  TECHNICIAN: 'technician'
 };
 
 // Field Mappings for Excel Import

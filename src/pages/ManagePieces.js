@@ -156,7 +156,7 @@ export default function ManagePieces() {
     'Serial Number Holder': '',
     Equipment: '',
     Section: '',
-    ProjectLine: '',
+     'Project Line': '', // changed from ProjectLine
     Description: '',
     'Storage Location': '',
     'MRP Type': '',
@@ -450,7 +450,7 @@ export default function ManagePieces() {
         'Serial Number Holder': '',
         Equipment: '',
         Section: '',
-        ProjectLine: '',
+        'Project Line': '', // changed from ProjectLine
         Description: '',
         'Storage Location': '',
         'MRP Type': '',
@@ -481,7 +481,7 @@ export default function ManagePieces() {
       'Serial Number Holder': String(piece['Serial Number Holder'] || ''),
       Equipment: String(piece.Equipment || ''),
       Section: String(piece.Section || ''),
-      ProjectLine: String(piece.ProjectLine || ''),
+      'Project Line': String(piece['Project Line'] || piece.ProjectLine || ''), // unified
       Description: String(piece.Description || ''),
       'Storage Location': String(piece['Storage Location'] || ''),
       'MRP Type': String(piece['MRP Type'] || ''),
@@ -526,37 +526,165 @@ export default function ManagePieces() {
       const allPiecesRaw = await dataManager.getAllPieces();
       const allPieces = (allPiecesRaw || []).map(item => normalizeKeys(item));
 
-      // Convert to CSV format instead of Excel to avoid ExcelJS dependency
-      const columnHeaders = [
-        'APN', 'SPN', 'Holder Name', 'Connecteur DPN', 'Parts Holder',
-        'Serial Number Holder', 'Equipment', 'Section', 'Project Line',
-        'Description', 'Storage Location', 'MRP Type', 'Suppliers',
-        'Unit Price', 'Unrestricted Stock', 'Min', 'Max', 'In Transit', 'More Information'
+      // Import ExcelJS dynamically
+      const ExcelJS = await import('exceljs');
+
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Pieces');
+
+      // Define columns with headers and widths
+      const columns = [
+        { header: 'APN', key: 'APN', width: 15 },
+        { header: 'SPN', key: 'SPN', width: 15 },
+        { header: 'Holder Name', key: 'Holder Name', width: 20 },
+        { header: 'Connecteur DPN', key: 'Connecteur DPN', width: 15 },
+        { header: 'Parts Holder', key: 'Parts Holder', width: 25 },
+        { header: 'Serial Number Holder', key: 'Serial Number Holder', width: 20 },
+        { header: 'Equipment', key: 'Equipment', width: 20 },
+        { header: 'Section', key: 'Section', width: 15 },
+        { header: 'Project Line', key: 'Project Line', width: 15 },
+        { header: 'Description', key: 'Description', width: 30 },
+        { header: 'Storage Location', key: 'Storage Location', width: 20 },
+        { header: 'MRP Type', key: 'MRP Type', width: 15 },
+        { header: 'Suppliers', key: 'Suppliers', width: 20 },
+        { header: 'Unit Price', key: 'Unit Price', width: 12 },
+        { header: 'Unrestricted Stock', key: 'Unrestricted Stock', width: 18 },
+        { header: 'Min', key: 'Min', width: 10 },
+        { header: 'Max', key: 'Max', width: 10 },
+        { header: 'In Transit', key: 'In Transit', width: 12 },
+        { header: 'More Information', key: 'More Information', width: 30 }
       ];
 
-      const csvContent = [
-        columnHeaders.join(','),
-        ...allPieces.map(piece =>
-          columnHeaders.map(key => {
-            const value = piece[key];
-            const escapedValue = Array.isArray(value) ? value.join('; ') : (value || '').toString().replace(/"/g, '""');
-            return `"${escapedValue}"`;
-          }).join(',')
-        )
-      ].join('\n');
+      worksheet.columns = columns;
 
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      // Add export timestamp
+      const timestampRow = worksheet.insertRow(1, [`Exported on: ${new Date().toLocaleString()}`]);
+      timestampRow.font = { italic: true, color: { argb: 'FF666666' } };
+      worksheet.mergeCells('A1:R1');
+
+      // Add a title row at the top
+      worksheet.insertRow(1, ['APTIV Parts Management System - Pieces Export']);
+      worksheet.getRow(1).font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
+      worksheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFFF7B00' } // Orange corporate color
+      };
+      worksheet.getRow(1).border = {
+        top: { style: 'medium', color: { argb: 'FF000000' } },
+        bottom: { style: 'medium', color: { argb: 'FF000000' } },
+        left: { style: 'medium', color: { argb: 'FF000000' } },
+        right: { style: 'medium', color: { argb: 'FF000000' } }
+      };
+      worksheet.mergeCells('A1:R1'); // Merge title across all columns
+
+      // Add header row
+      const headerRow = worksheet.addRow(columns.map(col => col.header));
+      headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      headerRow.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF333333' } // Dark gray header
+      };
+      headerRow.border = {
+        top: { style: 'thin', color: { argb: 'FF000000' } },
+        bottom: { style: 'thin', color: { argb: 'FF000000' } },
+        left: { style: 'thin', color: { argb: 'FF000000' } },
+        right: { style: 'thin', color: { argb: 'FF000000' } }
+      };
+
+      // Add data rows with alternating colors and conditional formatting
+      allPieces.forEach((piece, index) => {
+        const row = {};
+        columns.forEach(col => {
+          const value = piece[col.key];
+          if (Array.isArray(value)) {
+            row[col.key] = value.join('; ');
+          } else if (value !== null && value !== undefined) {
+            row[col.key] = value;
+          } else {
+            row[col.key] = '';
+          }
+        });
+        const addedRow = worksheet.addRow(row);
+
+        // Alternating row colors (zebra stripes)
+        const isEvenRow = index % 2 === 0;
+        addedRow.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: isEvenRow ? 'FFF9F9F9' : 'FFFFFFFF' } // Light gray for even rows
+        };
+
+        // Add borders to all cells
+        addedRow.border = {
+          top: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+          bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+          left: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+          right: { style: 'thin', color: { argb: 'FFE0E0E0' } }
+        };
+
+        // Conditional formatting for stock levels
+        const stockValue = parseFloat(piece['Unrestricted Stock']);
+        const minValue = parseFloat(piece['Min']);
+        const maxValue = parseFloat(piece['Max']);
+
+        if (!isNaN(stockValue)) {
+          const stockCell = addedRow.getCell('Unrestricted Stock');
+          if (!isNaN(minValue) && stockValue <= minValue) {
+            // Low stock - red background
+            stockCell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFFFCCCC' }
+            };
+            stockCell.font = { color: { argb: 'FFCC0000' }, bold: true };
+          } else if (!isNaN(maxValue) && stockValue > maxValue) {
+            // Over stock - orange background
+            stockCell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFFFE5CC' }
+            };
+            stockCell.font = { color: { argb: 'FFFF7B00' } };
+          } else {
+            // Normal stock - green background
+            stockCell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFCCFFCC' }
+            };
+            stockCell.font = { color: { argb: 'FF006600' } };
+          }
+        }
+
+        // Highlight important columns
+        const apnCell = addedRow.getCell('APN');
+        apnCell.font = { bold: true, color: { argb: 'FF333333' } };
+
+        const partsHolderCell = addedRow.getCell('Parts Holder');
+        partsHolderCell.font = { bold: true };
+      });
+
+      // Auto-fit columns and add some padding
+      worksheet.columns.forEach(column => {
+        column.width = Math.max(column.width || 10, 12);
+      });
+
+      // Generate buffer and download
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'updated_pieces.csv';
+      a.download = 'updated_pieces.xlsx';
       a.click();
       URL.revokeObjectURL(url);
       a.remove();
-      showNotification('Downloaded successfully as CSV', 'success');
+      showNotification('Downloaded successfully as Excel file with enhanced colors', 'success');
     } catch (error) {
-      console.error("Failed to download CSV", error);
-      showNotification(`Failed to download CSV: ${error.message}`, 'error');
+      console.error("Failed to download Excel", error);
+      showNotification(`Failed to download Excel: ${error.message}`, 'error');
     }
   };
 
@@ -971,7 +1099,13 @@ export default function ManagePieces() {
 
                     <div className="form-field">
                       <label htmlFor="add-ProjectLine">Project Line</label>
-                      <input id="add-ProjectLine" name="ProjectLine" value={addForm.ProjectLine || ''} onChange={(e) => setAddForm({ ...addForm, ProjectLine: e.target.value })} className="form-input" />
+                      <input
+                        id="add-ProjectLine"
+                        name="Project Line"               // changed name
+                        value={addForm['Project Line'] || ''}
+                        onChange={(e) => setAddForm({ ...addForm, 'Project Line': e.target.value })}
+                        className="form-input"
+                      />
                     </div>
 
                     <div className="form-field">
