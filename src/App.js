@@ -18,6 +18,7 @@ const Login = lazy(() => import("./pages/Login"));
 const Search = lazy(() => import("./pages/Search"));
 const PieceDetails = lazy(() => import("./pages/PieceDetails"));
 const ManagePieces = lazy(() => import("./pages/ManagePieces"));
+const ConsumptionTracking = lazy(() => import("./pages/ConsumptionTracking"));
 
 // Notification Context
 const NotificationContext = createContext();
@@ -149,6 +150,7 @@ function AppContent() {
               <Route path="/" element={<Login />} />
               <Route path="/search" element={<Search />} />
               <Route path="/manage-pieces" element={<ManagePieces />} />
+              <Route path="/consumption-tracking" element={<ConsumptionTracking />} />
               <Route path="/piece/:id" element={<PieceDetails />} />
             </Routes>
           </Suspense>

@@ -20,6 +20,82 @@ const cacheStore = localforage.createInstance({
   storeName: 'app_cache_store'
 });
 
+// -------------------- IndexedDB Operation Queue & Retry Logic --------------------
+class IndexedDBOperationQueue {
+  constructor() {
+    this.queue = [];
+    this.processing = false;
+    this.maxRetries = 3;
+    this.baseDelay = 100; // ms
+  }
+
+  async enqueue(operation) {
+    return new Promise((resolve, reject) => {
+      this.queue.push({ operation, resolve, reject, retries: 0 });
+      this.processQueue();
+    });
+  }
+
+  async processQueue() {
+    if (this.processing || this.queue.length === 0) return;
+    
+    this.processing = true;
+    
+    while (this.queue.length > 0) {
+      const item = this.queue[0];
+      
+      try {
+        const result = await this.executeWithRetry(item);
+        this.queue.shift();
+        item.resolve(result);
+      } catch (error) {
+        this.queue.shift();
+        item.reject(error);
+      }
+    }
+    
+    this.processing = false;
+  }
+
+  async executeWithRetry(item) {
+    const { operation } = item;
+    
+    try {
+      // Add timeout to prevent hanging operations
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('IndexedDB operation timeout')), 10000)
+      );
+      
+      const result = await Promise.race([operation(), timeoutPromise]);
+      return result;
+    } catch (error) {
+      if (item.retries < this.maxRetries) {
+        item.retries++;
+        const delay = this.baseDelay * Math.pow(2, item.retries);
+        
+        console.warn(`IndexedDB operation failed, retry ${item.retries}/${this.maxRetries} after ${delay}ms:`, error.message);
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.executeWithRetry(item);
+      }
+      
+      throw error;
+    }
+  }
+}
+
+const dbQueue = new IndexedDBOperationQueue();
+
+// -------------------- Safe IndexedDB Operations with Error Handling --------------------
+async function safeIndexedDBOperation(operation, fallbackValue = null) {
+  try {
+    return await dbQueue.enqueue(operation);
+  } catch (error) {
+    console.error('IndexedDB operation failed after retries:', error);
+    return fallbackValue;
+  }
+}
+
 // -------------------- Helpers: field migration & normalization --------------------
 const migratePieceFields = (piece) => {
   const fieldMappings = {
@@ -78,52 +154,49 @@ const validatePieceResult = (piece) => {
   }
 };
 
-// -------------------- IndexedDB-backed cache helpers --------------------
+// -------------------- IndexedDB-backed cache helpers with retry logic --------------------
 async function getCache() {
-  try {
+  return await safeIndexedDBOperation(async () => {
     const cached = await cacheStore.getItem(CACHE_KEY);
     if (!cached) return null;
+    
     if (cached.timestamp && Array.isArray(cached.data)) {
       if (Date.now() - cached.timestamp < CACHE_EXPIRY) {
         return cached.data;
       } else {
-        // stale cache
-        await cacheStore.removeItem(CACHE_KEY);
+        // stale cache - schedule removal without blocking
+        safeIndexedDBOperation(() => cacheStore.removeItem(CACHE_KEY), null).catch(() => {});
         return null;
       }
     }
+    
     // support legacy shape where data may have been stored directly
     return Array.isArray(cached) ? cached : null;
-  } catch (err) {
-    try { await cacheStore.removeItem(CACHE_KEY); } catch (_) {}
-    return null;
-  }
+  }, null);
 }
 
 async function setCache(data) {
-  try {
-    if (!Array.isArray(data)) return;
+  if (!Array.isArray(data)) return;
+  
+  return await safeIndexedDBOperation(async () => {
     const payload = { data, timestamp: Date.now() };
     await cacheStore.setItem(CACHE_KEY, payload);
-  } catch (err) {
-    try { await cacheStore.removeItem(CACHE_KEY); } catch (_) {}
-  }
+    return true;
+  }, false);
 }
 
 async function saveUploadedImagesMap(mapObj) {
-  try {
+  return await safeIndexedDBOperation(async () => {
     await cacheStore.setItem(UPLOADED_IMAGES_KEY, mapObj || {});
-  } catch (err) {
-  }
+    return true;
+  }, false);
 }
 
 async function getUploadedImagesMap() {
-  try {
+  return await safeIndexedDBOperation(async () => {
     const mapObj = await cacheStore.getItem(UPLOADED_IMAGES_KEY);
     return mapObj || {};
-  } catch (err) {
-    return {};
-  }
+  }, {});
 }
 
 // -------------------- DataManager --------------------
@@ -139,10 +212,10 @@ const dataManager = {
   },
 
   async clearCache() {
-    try {
+    return await safeIndexedDBOperation(async () => {
       await cacheStore.removeItem(CACHE_KEY);
-    } catch (err) {
-    }
+      return true;
+    }, false);
   },
 
   isOnline() {
@@ -166,7 +239,7 @@ const dataManager = {
   },
 
   async saveUploadedImages(imagesMap) {
-    await saveUploadedImagesMap(imagesMap || {});
+    return await saveUploadedImagesMap(imagesMap || {});
   },
 
   async getUploadedImages() {
@@ -192,13 +265,17 @@ const dataManager = {
         try {
           const parsed = JSON.parse(legacy);
           if (parsed && typeof parsed === 'object') {
-            await saveUploadedImagesMap(parsed);
-            localStorage.removeItem(UPLOADED_IMAGES_KEY);
+            const migrated = await saveUploadedImagesMap(parsed);
+            if (migrated) {
+              localStorage.removeItem(UPLOADED_IMAGES_KEY);
+            }
           }
         } catch (parseErr) {
+          console.error('Failed to parse legacy uploaded images:', parseErr);
         }
       }
     } catch (migrationErr) {
+      console.error('Migration error:', migrationErr);
     }
   },
 
@@ -230,9 +307,14 @@ const dataManager = {
         }
       });
 
-      // Save small fallback and IndexedDB cache
+      // Save small fallback and IndexedDB cache (non-blocking)
       this.saveLocalPieces(pieces);
-      await setCache(pieces);
+      
+      // Cache in background without blocking the response
+      setCache(pieces).catch(err => {
+        console.error('Failed to cache pieces:', err);
+      });
+      
       return pieces;
     } catch (err) {
       return this.getLocalPieces();
@@ -320,7 +402,11 @@ const dataManager = {
 
     try {
       const docRef = await addDoc(collection(db, PIECES_COLLECTION), sanitized);
-      await this.clearCache();
+      
+      // Clear cache in background
+      this.clearCache().catch(err => {
+        console.error('Failed to clear cache after add:', err);
+      });
 
       const localPieces = this.getLocalPieces();
       localPieces.push({ id: docRef.id, ...sanitized });
@@ -384,7 +470,12 @@ const dataManager = {
     }
 
     if (operations > 0) await batch.commit();
-    await this.clearCache();
+    
+    // Clear cache in background
+    this.clearCache().catch(err => {
+      console.error('Failed to clear cache after bulk add:', err);
+    });
+    
     return results;
   },
 
@@ -404,14 +495,19 @@ const dataManager = {
     try {
       const docRef = doc(db, PIECES_COLLECTION, id);
       await updateDoc(docRef, sanitized);
-      await this.clearCache();
-
+      
+      // Update local storage first (synchronous)
       const localPieces = this.getLocalPieces();
       const index = localPieces.findIndex(p => p.id === id);
       if (index !== -1) {
         localPieces[index] = { ...localPieces[index], ...sanitized };
         this.saveLocalPieces(localPieces);
       }
+      
+      // Clear cache in background to avoid blocking
+      this.clearCache().catch(err => {
+        console.error('Failed to clear cache after update:', err);
+      });
 
       return { id, ...sanitized };
     } catch (err) {
@@ -426,11 +522,16 @@ const dataManager = {
     try {
       const docRef = doc(db, PIECES_COLLECTION, id);
       await deleteDoc(docRef);
-      await this.clearCache();
-
+      
+      // Update local storage first
       const localPieces = this.getLocalPieces();
       const filtered = localPieces.filter(p => p.id !== id);
       this.saveLocalPieces(filtered);
+      
+      // Clear cache in background
+      this.clearCache().catch(err => {
+        console.error('Failed to clear cache after delete:', err);
+      });
 
       return true;
     } catch (err) {
@@ -447,8 +548,15 @@ const dataManager = {
       if (snapshot.size === 0) return 0;
       snapshot.docs.forEach(docSnap => batch.delete(docSnap.ref));
       await batch.commit();
-      await this.clearCache();
+      
+      // Update local storage first
       this.saveLocalPieces([]);
+      
+      // Clear cache in background
+      this.clearCache().catch(err => {
+        console.error('Failed to clear cache after delete all:', err);
+      });
+      
       return snapshot.size;
     } catch (err) {
       throw err;

@@ -171,7 +171,7 @@ function ExcelManager({ onDataSave, returnDataOnly = false }) {
                     { regex: /(mrp\.type|mrp|type|material\.type)/, field: 'MRP Type' },
                     { regex: /(suppliers|supplier|vendor|provider)/, field: 'Suppliers' },
                     { regex: /(unit\.price|price|cost|unit\.cost)/, field: 'Unit Price' },
-                    { regex: /(unrestricted\.stock|stock|quantity|qty|inventory)/, field: 'Unrestricted Stock' },
+                    { regex: /(unrestricted\.stock|stock|quantity|qty|inventory|qté|quantité)/, field: 'Unrestricted Stock' },
                     { regex: /(min|minimum|min\.qty|min\.quantity)/, field: 'Min' },
                     { regex: /(max|maximum|max\.qty|max\.quantity)/, field: 'Max' },
                     { regex: /(in\.transit|transit|shipping|on\.the\.way)/, field: 'In Transit' },

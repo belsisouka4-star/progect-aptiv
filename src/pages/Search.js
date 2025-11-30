@@ -4,6 +4,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 // Services and Components
 import dataManager from '../services/DataManager';
 import ImageZoomModal from '../components/ImageZoomModal';
+import Notification from '../components/Notification';
+
+// Utils
+import { isZeroStock, formatStockDisplay } from '../utils/helpers';
 
 // Styles
 import '../styles/App.css';
@@ -385,6 +389,7 @@ function Search() {
   const [showZoomModal, setShowZoomModal] = useState(false);
   const [showWarningDropdown, setShowWarningDropdown] = useState(false);
   const [selectedUnderStockAPN, setSelectedUnderStockAPN] = useState('');
+  const [notification, setNotification] = useState(null);
   const navigate = useNavigate();
   const locationHook = useLocation();
 
@@ -475,6 +480,21 @@ function Search() {
         if (p['More Information']) allSearchable.add(p['More Information'].toString());
       });
       setPartInfoSuggestions([...allSearchable]);
+
+      // Check for zero stock items and show notification for supervisors
+      if (userRole === 'supervisor') {
+        const zeroStockItems = allPieces.filter(p => {
+          const stock = parseFloat(p['Unrestricted Stock']);
+          return isZeroStock(stock);
+        });
+
+        if (zeroStockItems.length > 0) {
+          setNotification({
+            message: `⚠️ CRITICAL: ${zeroStockItems.length} item(s) have ZERO stock!`,
+            type: 'error'
+          });
+        }
+      }
     } catch (error) {
       console.error('Failed to load pieces:', error);
       setError('Failed to load pieces: ' + error.message);
@@ -485,7 +505,7 @@ function Search() {
     } finally {
       setLoading(false);
     }
-  }, [loadPieceImages]);
+  }, [loadPieceImages, userRole]);
 
 
 
@@ -624,7 +644,23 @@ function Search() {
                 <button onClick={handleLogout} className="btn-secondary">Logout</button>
               </div>
               {userRole === 'supervisor' && (
-                <div style={{ position: 'relative', marginLeft: '-80px' }}>
+                <div style={{ position: 'relative', marginLeft: '-80px', display: 'flex', gap: '10px' }}>
+                  <button
+                    onClick={() => navigate('/consumption-tracking')}
+                    style={{
+                      padding: '8px 12px',
+                      backgroundColor: '#007bff',
+                      border: '2px solid #fff',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                      color: 'white'
+                    }}
+                    title="Consumption Tracking"
+                  >
+                    📊
+                  </button>
                   <button
                     onClick={() => setShowWarningDropdown(!showWarningDropdown)}
                     style={{
@@ -658,49 +694,125 @@ function Search() {
                       zIndex: 1000,
                       boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
                     }}>
-                      <h4 style={{ color: 'white', margin: '0 0 10px 0', fontSize: '1rem' }}>Under Stock Items: ({pieces.filter(p => {
-                        const stock = parseFloat(p['Unrestricted Stock']);
-                        const min = parseFloat(p.Min);
-                        return !isNaN(stock) && !isNaN(min) && stock < min;
-                      }).length})</h4>
-                      <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                        {pieces.filter(p => {
+                      <h4 style={{ color: 'white', margin: '0 0 10px 0', fontSize: '1rem' }}>
+                        Stock Warnings: ({pieces.filter(p => {
                           const stock = parseFloat(p['Unrestricted Stock']);
                           const min = parseFloat(p.Min);
                           return !isNaN(stock) && !isNaN(min) && stock < min;
-                        }).map(piece => (
-                          <button
-                            key={piece.id || piece.APN}
-                            onClick={() => {
-                              setSelectedUnderStockAPN(piece.APN);
-                              setPartInfo(piece.APN);
-                              setShowWarningDropdown(false);
-                            }}
-                            style={{
-                              display: 'block',
-                              width: '100%',
-                              padding: '8px',
+                        }).length})
+                      </h4>
+                      <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                        {/* Zero Stock Items - Priority */}
+                        {pieces.filter(p => isZeroStock(parseFloat(p['Unrestricted Stock']))).length > 0 && (
+                          <>
+                            <div style={{ 
+                              color: '#FF0000', 
+                              fontWeight: 'bold', 
+                              fontSize: '0.85rem', 
                               marginBottom: '5px',
-                              background: 'linear-gradient(90deg, #ff4444, #cc0000)',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontSize: '0.9rem',
-                              textAlign: 'left'
-                            }}
-                          >
-                            {piece.APN}
-                          </button>
-                        ))}
+                              padding: '5px',
+                              background: 'rgba(255, 0, 0, 0.1)',
+                              borderRadius: '4px'
+                            }}>
+                              🚨 ZERO STOCK ({pieces.filter(p => isZeroStock(parseFloat(p['Unrestricted Stock']))).length})
+                            </div>
+                            {pieces.filter(p => isZeroStock(parseFloat(p['Unrestricted Stock']))).map(piece => (
+                              <button
+                                key={piece.id || piece.APN}
+                                onClick={() => {
+                                  setSelectedUnderStockAPN(piece.APN);
+                                  setPartInfo(piece.APN);
+                                  setShowWarningDropdown(false);
+                                }}
+                                style={{
+                                  display: 'block',
+                                  width: '100%',
+                                  padding: '8px',
+                                  marginBottom: '5px',
+                                  background: 'linear-gradient(90deg, #FF0000, #CC0000)',
+                                  color: 'white',
+                                  border: '2px solid #FF0000',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  fontSize: '0.9rem',
+                                  textAlign: 'left',
+                                  fontWeight: 'bold',
+                                  animation: 'pulse 2s infinite'
+                                }}
+                              >
+                                {piece.APN} !!!
+                              </button>
+                            ))}
+                          </>
+                        )}
+                        
+                        {/* Under Stock Items */}
+                        {pieces.filter(p => {
+                          const stock = parseFloat(p['Unrestricted Stock']);
+                          const min = parseFloat(p.Min);
+                          return !isNaN(stock) && !isNaN(min) && stock < min && !isZeroStock(stock);
+                        }).length > 0 && (
+                          <>
+                            <div style={{ 
+                              color: '#ff4444', 
+                              fontWeight: 'bold', 
+                              fontSize: '0.85rem', 
+                              marginTop: '10px',
+                              marginBottom: '5px',
+                              padding: '5px'
+                            }}>
+                              ⚠️ UNDER STOCK ({pieces.filter(p => {
+                                const stock = parseFloat(p['Unrestricted Stock']);
+                                const min = parseFloat(p.Min);
+                                return !isNaN(stock) && !isNaN(min) && stock < min && !isZeroStock(stock);
+                              }).length})
+                            </div>
+                            {pieces.filter(p => {
+                              const stock = parseFloat(p['Unrestricted Stock']);
+                              const min = parseFloat(p.Min);
+                              return !isNaN(stock) && !isNaN(min) && stock < min && !isZeroStock(stock);
+                            }).map(piece => (
+                              <button
+                                key={piece.id || piece.APN}
+                                onClick={() => {
+                                  setSelectedUnderStockAPN(piece.APN);
+                                  setPartInfo(piece.APN);
+                                  setShowWarningDropdown(false);
+                                }}
+                                style={{
+                                  display: 'block',
+                                  width: '100%',
+                                  padding: '8px',
+                                  marginBottom: '5px',
+                                  background: 'linear-gradient(90deg, #ff4444, #cc0000)',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  fontSize: '0.9rem',
+                                  textAlign: 'left'
+                                }}
+                              >
+                                {piece.APN}
+                              </button>
+                            ))}
+                          </>
+                        )}
+                        
                         {pieces.filter(p => {
                           const stock = parseFloat(p['Unrestricted Stock']);
                           const min = parseFloat(p.Min);
                           return !isNaN(stock) && !isNaN(min) && stock < min;
                         }).length === 0 && (
-                          <p style={{ color: 'rgba(255,255,255,0.7)', margin: '0', fontSize: '0.9rem' }}>No under-stock items</p>
+                          <p style={{ color: 'rgba(255,255,255,0.7)', margin: '0', fontSize: '0.9rem' }}>No stock warnings</p>
                         )}
                       </div>
+                      <style>{`
+                        @keyframes pulse {
+                          0%, 100% { opacity: 1; }
+                          50% { opacity: 0.7; }
+                        }
+                      `}</style>
                     </div>
                   )}
                 </div>
@@ -887,12 +999,34 @@ function Search() {
                               )}
                             </div>
                             <div className="piece-info">
-                                {pieceInfoItems.map((item, idx) => (
-                                  <div key={idx} className="piece-info-item">
-                                    <span>{item.label}:</span>
-                                    <span>{item.label === 'Holder Name' ? (Array.isArray(item.value) ? item.value.map((val, idx2) => <span key={idx2}><span style={{ cursor: 'pointer', color: '#007bff' }} onClick={(e) => { e.stopPropagation(); navigate(`/search?partInfo=${encodeURIComponent(val)}`); }}>{val}</span>{idx2 < item.value.length - 1 ? ', ' : ''}</span>) : <span style={{ cursor: 'pointer', color: '#007bff' }} onClick={(e) => { e.stopPropagation(); navigate(`/search?partInfo=${encodeURIComponent(item.value)}`); }}>{renderValue(item.value)}</span>) : renderValue(item.value)}</span>
-                                  </div>
-                                ))}
+                              {pieceInfoItems.map((item, idx) => (
+                                <div key={idx} className="piece-info-item">
+                                  <span>{item.label}:</span>
+                                  <span style={{
+                                    color: item.label === 'Unrestricted Stock' && isZeroStock(parseFloat(item.value)) ? '#FF0000' : 'inherit',
+                                    fontWeight: item.label === 'Unrestricted Stock' && isZeroStock(parseFloat(item.value)) ? 'bold' : 'inherit'
+                                  }}>
+                                    {item.label === 'Holder Name' ? (
+                                      Array.isArray(item.value) ? 
+                                        item.value.map((val, idx2) => (
+                                          <span key={idx2}>
+                                            <span style={{ cursor: 'pointer', color: '#007bff' }} onClick={(e) => { e.stopPropagation(); navigate(`/search?partInfo=${encodeURIComponent(val)}`); }}>
+                                              {val}
+                                            </span>
+                                            {idx2 < item.value.length - 1 ? ', ' : ''}
+                                          </span>
+                                        )) : 
+                                        <span style={{ cursor: 'pointer', color: '#007bff' }} onClick={(e) => { e.stopPropagation(); navigate(`/search?partInfo=${encodeURIComponent(item.value)}`); }}>
+                                          {renderValue(item.value)}
+                                        </span>
+                                    ) : item.label === 'Unrestricted Stock' ? (
+                                      formatStockDisplay(item.value)
+                                    ) : (
+                                      renderValue(item.value)
+                                    )}
+                                  </span>
+                                </div>
+                              ))}
                             </div>
                           </div>
                         );
@@ -903,7 +1037,8 @@ function Search() {
                         const min = parseFloat(piece.Min);
                         let stockColor = 'gray'; // Default for invalid data
                         if (!isNaN(stock) && !isNaN(min)) {
-                          if (stock > min) stockColor = 'green';
+                          if (isZeroStock(stock)) stockColor = '#FF0000'; // Bright red for zero stock
+                          else if (stock > min) stockColor = 'green';
                           else if (stock === min) stockColor = 'orange';
                           else if (stock < min) stockColor = 'red';
                         }
@@ -923,7 +1058,9 @@ function Search() {
                               backgroundColor: stockColor,
                               borderRadius: '50%',
                               border: '1px solid rgba(255,255,255,0.5)',
-                              zIndex: 10
+                              zIndex: 10,
+                              animation: isZeroStock(stock) ? 'pulse 2s infinite' : 'none',
+                              boxShadow: isZeroStock(stock) ? '0 0 10px #FF0000' : 'none'
                             }}></div>
                             <div style={{ fontSize: '2.2rem', fontWeight: 'bold', color: 'white', textShadow: '0 0 5px rgba(255,255,255,0.5)', marginBottom: '15px' }}>
                               {renderValue(piece.APN)}
@@ -1008,6 +1145,18 @@ function Search() {
 
           {showZoomModal && (
             <ImageZoomModal isOpen={showZoomModal} imageSrc="" imageAlt="" onClose={() => setShowZoomModal(false)} />
+          )}
+
+          {/* Notification for zero stock items */}
+          {notification && (
+            <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 9999 }}>
+              <Notification
+                message={notification.message}
+                type={notification.type}
+                onClose={() => setNotification(null)}
+                duration={10000}
+              />
+            </div>
           )}
       </div>
     </>

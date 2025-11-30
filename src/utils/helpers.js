@@ -222,13 +222,37 @@ export const logout = () => {
 };
 
 /**
+ * Checks if stock is zero
+ * @param {number} stock - Current stock
+ * @returns {boolean} - Whether stock is zero
+ */
+export const isZeroStock = (stock) => {
+  const stockNum = parseFloat(stock);
+  return !isNaN(stockNum) && stockNum === 0;
+};
+
+/**
+ * Formats stock display with warning indicator for zero stock
+ * @param {number} stock - Current stock
+ * @returns {string} - Formatted stock display
+ */
+export const formatStockDisplay = (stock) => {
+  if (isZeroStock(stock)) {
+    return `${stock} !!!`;
+  }
+  return stock;
+};
+
+/**
  * Gets stock status color based on stock levels
  * @param {number} stock - Current stock
  * @param {number} min - Minimum stock level
- * @returns {string} - Color name
+ * @returns {string} - Color name or hex code
  */
 export const getStockStatusColor = (stock, min) => {
   if (isNaN(stock) || isNaN(min)) return 'gray';
+  // Bright red for zero stock
+  if (isZeroStock(stock)) return '#FF0000';
   if (stock > min) return 'green';
   if (stock === min) return 'orange';
   return 'red';

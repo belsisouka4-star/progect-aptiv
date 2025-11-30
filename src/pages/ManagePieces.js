@@ -87,6 +87,8 @@ function normalizeKeys(raw) {
     'unit price': 'Unit Price',
     'unitprice': 'Unit Price',
     'unrestricted stock': 'Unrestricted Stock',
+    'qté': 'Unrestricted Stock',
+    'quantité': 'Unrestricted Stock',
     stock: 'Unrestricted Stock',
     quantity: 'Unrestricted Stock',
     qty: 'Unrestricted Stock',

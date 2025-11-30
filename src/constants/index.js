@@ -43,7 +43,7 @@ export const FIELD_MAPPINGS = {
   'MRP Type': ['mrpType', 'mrp.type', 'mrp', 'type', 'material.type', 'planning.type'],
   'Suppliers': ['suppliers', 'supplier', 'vendor', 'provider', 'manufacturer', 'maker', 'producer'],
   'Unit Price': ['unitPrice', 'unit.price', 'price', 'cost', 'unit.cost', 'price.per.unit'],
-  'Unrestricted Stock': ['unrestrictedStock', 'unrestricted.stock', 'stock', 'quantity', 'inventory', 'available'],
+  'Unrestricted Stock': ['unrestrictedStock', 'unrestricted.stock', 'stock', 'quantity', 'inventory', 'available', 'qté', 'qty', 'quantité'],
   'Min': ['min', 'minimum', 'min.qty', 'min.quantity', 'minimum.stock', 'min.stock'],
   'Max': ['max', 'maximum', 'max.qty', 'max.quantity', 'maximum.stock', 'max.stock'],
   'In Transit': ['inTransit', 'in.transit', 'transit', 'shipping', 'on.the.way', 'en.route'],
