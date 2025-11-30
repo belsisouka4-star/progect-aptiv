@@ -107,8 +107,15 @@ body {
   padding: 25px 30px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
 }
 
 .header-left h1 {
@@ -439,6 +446,7 @@ body {
 
   .header-left {
     margin-bottom: 15px;
+    align-items: center;
   }
 
   .header-right {
@@ -986,6 +994,12 @@ const ConsumptionTracking = () => {
       <div className="consumption-container">
         <div className="consumption-header">
           <div className="header-left">
+            <button 
+              onClick={() => navigate('/search')} 
+              className="btn-back"
+            >
+              ← Back to Search
+            </button>
             <h1>Warehouse Inventory Management</h1>
             <p>Inventory tracking and management system</p>
           </div>
@@ -1070,13 +1084,6 @@ const ConsumptionTracking = () => {
                 </span>
               </div>
             </div>
-
-            <button 
-              onClick={() => navigate('/search')} 
-              className="btn-back"
-            >
-              ← Back to Search
-            </button>
           </div>
         </div>
 

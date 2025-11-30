@@ -648,18 +648,22 @@ function Search() {
                   <button
                     onClick={() => navigate('/consumption-tracking')}
                     style={{
-                      padding: '8px 12px',
-                      backgroundColor: '#007bff',
+                      width: '30px',
+                      height: '30px',
+                      backgroundColor: 'transparent',
                       border: '2px solid #fff',
                       borderRadius: '4px',
                       cursor: 'pointer',
-                      fontSize: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '18px',
                       fontWeight: 'bold',
                       color: 'white'
                     }}
                     title="Consumption Tracking"
                   >
-                    📊
+                    📄
                   </button>
                   <button
                     onClick={() => setShowWarningDropdown(!showWarningDropdown)}
